@@ -1,6 +1,7 @@
 package com.sunnyweather.android.ui.place
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -14,10 +15,12 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.sunnyweather.android.R
+import com.sunnyweather.android.ui.weather.WeatherActivity
 import kotlinx.android.synthetic.main.fragment_place.*
 
 class PlaceFragment : Fragment() {
-    val viewMode by lazy { ViewModelProvider(this).get(PlaceViewMode::class.java) }
+
+    val viewModel by lazy { ViewModelProvider(this).get(PlaceViewMode::class.java) }
 
     private lateinit var adapter: PlaceAdapter
 
@@ -37,29 +40,40 @@ class PlaceFragment : Fragment() {
             override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
                 if (event.targetState == Lifecycle.State.CREATED) {
                     // perform logic
+                    if (viewModel.isPlaceSaved()) {
+                        val place = viewModel.getSavedPlace()
+                        val intent = Intent(context, WeatherActivity::class.java).apply {
+                            putExtra("location_lng", place.location.lng)
+                            putExtra("location_lat", place.location.lat)
+                            putExtra("place_name", place.name)
+                        }
+                        startActivity(intent)
+                        activity?.finish()
+                        return
+                    }
                     val layoutManager = LinearLayoutManager(activity)
                     recyclerView.layoutManager = layoutManager
-                    adapter = PlaceAdapter(this@PlaceFragment, viewMode.placeList)
+                    adapter = PlaceAdapter(this@PlaceFragment, viewModel.placeList)
                     recyclerView.adapter = adapter
                     searchPlaceEdit.addTextChangedListener {
                         val content = it.toString()
                         if (content.isNotEmpty()) {
-                            viewMode.searchPlaces(content)
+                            viewModel.searchPlaces(content)
                         } else {
                             recyclerView.visibility = View.GONE
                             bgImageView.visibility = View.VISIBLE
-                            viewMode.placeList.clear()
+                            viewModel.placeList.clear()
                             adapter.notifyDataSetChanged()
                         }
                     }
 
-                    viewMode.placeLiveData.observe(this@PlaceFragment) {
+                    viewModel.placeLiveData.observe(this@PlaceFragment) {
                         val places = it.getOrNull()
                         if (places != null) {
                             recyclerView.visibility = View.VISIBLE
                             bgImageView.visibility = View.GONE
-                            viewMode.placeList.clear()
-                            viewMode.placeList.addAll(places)
+                            viewModel.placeList.clear()
+                            viewModel.placeList.addAll(places)
                             adapter.notifyDataSetChanged()
                         } else {
                             Toast.makeText(context, "未能查询到任何地点", Toast.LENGTH_SHORT).show()
@@ -73,4 +87,5 @@ class PlaceFragment : Fragment() {
             }
         })
     }
+
 }

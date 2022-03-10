@@ -16,4 +16,5 @@ class SunnyWeatherApplication : Application() {
         super.onCreate()
         context = applicationContext
     }
+
 }
